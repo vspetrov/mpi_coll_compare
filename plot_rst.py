@@ -149,9 +149,9 @@ def parse_file(filename,benchmark):
             curr_procs = procs
 
         if benchmark == "imb":
-            m = re.match('^#\sBenchmarking\s(\w+)',line)
+            m = re.match('^#\sBenchmarking\s(\S+)',line)
         else:
-            m = re.match('^#\sOSU\sMPI\s(\w+)\s\w+\sTest',line)
+            m = re.match('^#\sOSU\sMPI\s([\w\-]+)(\s\w+)+\sTest',line)
         if m:
             coll=m.group(1)
             if not coll in rst_colls:
@@ -169,6 +169,8 @@ def parse_file(filename,benchmark):
             msize, time = get_line_imb(line, curr_coll)
         if benchmark == "osu":
             msize, time = get_line_osu(line, curr_coll)
+
+
         coll_result = rst_colls[curr_coll]
         if msize and time:
             if not msize == -1:
