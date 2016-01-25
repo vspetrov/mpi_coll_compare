@@ -10,7 +10,7 @@ import os
 from subprocess import call
 from optparse import OptionParser
 import tempfile
-
+import pdb
 
 # Get the command line options parser
 def get_cmd_param_parser():
@@ -140,7 +140,18 @@ def parse_file(filename,benchmark):
     curr_coll=""
     curr_procs=0
     for line in open(filename).readlines():
-        m = re.match('^#\sBenchmarking\s(\w+)',line)
+        m = re.match('^benchrun_NP:\s(\d+)',line)
+        if m:
+            procs=int(m.group(1))
+            # coll_result = rst_colls[curr_coll]
+            # if not procs in coll_result:
+                # coll_result[procs] = []
+            curr_procs = procs
+
+        if benchmark == "imb":
+            m = re.match('^#\sBenchmarking\s(\w+)',line)
+        else:
+            m = re.match('^#\sOSU\sMPI\s(\w+)\s\w+\sTest',line)
         if m:
             coll=m.group(1)
             if not coll in rst_colls:
@@ -150,13 +161,6 @@ def parse_file(filename,benchmark):
                     rst_colls[coll] = []
             curr_coll = coll
 
-        m = re.match('^#\s+#processes\s+=\s+(\d+)',line)
-        if m:
-            procs=int(m.group(1))
-            # coll_result = rst_colls[curr_coll]
-            # if not procs in coll_result:
-                # coll_result[procs] = []
-            curr_procs = procs
 
         if curr_coll == "":
             continue
@@ -246,6 +250,15 @@ def save_table(data, filename):
     call(["rm",os.path.basename(f.name)+".log"])
     f.close()
 
+def figs_sorter(x,y):
+    x1 = x[0].split('#')
+    y1 = y[0].split('#')
+    if len(x1) < 2 or len(y1) < 2:
+        return 1 if x1 < y1 else -1
+    elif x1[0] == y1[0]:
+        return int(x1[1]) - int(y1[1])
+    else:
+        return 1 if x1[0] < y1[0] else -1
 
 def process_results(options):
     nodes_num = options.node_num
@@ -336,7 +349,8 @@ def process_results(options):
 
         toc = open("pdfmarks","w")
         i = 0
-        for id,fig in sorted(figs.iteritems(), key=lambda x: int(x[0].split('#')[1])):
+
+        for id,fig in sorted(figs.iteritems(), cmp=figs_sorter):
             print "Writing ", id, " to pdf"
             i += 1
             if nodes_num:
