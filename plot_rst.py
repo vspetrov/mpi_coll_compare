@@ -11,7 +11,7 @@ from subprocess import call
 from optparse import OptionParser
 import tempfile
 import pdb
-
+from matplotlib.ticker import MaxNLocator
 # Get the command line options parser
 def get_cmd_param_parser():
   parser = OptionParser()
@@ -69,11 +69,11 @@ def add_graph(rst_colls,collname,msize,fig,filename,nodes_num,ppn, table_data = 
     rst = sorted(rst)
     for (procs,time) in rst:
         if nodes_num:
-            p.append(procs/nodes_num)
+            p.append(int(procs/nodes_num))
         elif ppn:
-            p.append(procs/ppn)
+            p.append(int(procs/ppn))
         else:
-            p.append(procs)
+            p.append(int(procs))
         t.append(float(time))
 
     ax=fig.gca()
@@ -84,7 +84,7 @@ def add_graph(rst_colls,collname,msize,fig,filename,nodes_num,ppn, table_data = 
         marker = 's'
         markersize=5
     ax.plot(p,t,marker=marker,markersize=markersize,label=collname+extra_label+"["+os.path.basename(filename)+"]")
-
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     if not table_data == None:
         if not fig in table_data:
             table_data[fig]={}
@@ -123,14 +123,14 @@ def get_line_osu(line, curr_coll):
     msize=None
     time = None
     if not curr_coll == 'Barrier':
-        m = re.match('^(\d+)\s+(\d+\.\d+)$',line)
+        m = re.match('^(\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+)\s*$',line)
         if m:
             msize = int(m.group(1))
-            time =  float(m.group(2))
+            time =  float(m.group(4))
     else:
-        m = re.match('^\s+(\d+\.\d+)$',line)
+        m = re.match('^\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+)\s*$',line)
         if m:
-            time = float(m.group(1))
+            time = float(m.group(3))
             msize = -1
     return msize,time
 
@@ -188,7 +188,7 @@ def save_table(data, filename):
 
     tab_header="{|l||"
     cells_header=[]
-    cells_hnums="ppn"
+    cells_hnums="nnodes"
     counter=1
 
     for key in data['ydata'].keys():
@@ -327,8 +327,11 @@ def process_results(options):
             plt.savefig(options.save_to, bbox_extra_artists=(lgd,), bbox_inches='tight')
     else:
         figs = {}
+        coll_list= ["Barrier", "Bcast", "Allgather", "Allreduce", "Alltoallv"]
+        if options.benchmark == "osu":
+            coll_list= ["Barrier", "Broadcast", "Allgather", "Allreduce", "All-to-Allv"]
 
-        for coll in ["Barrier", "Bcast", "Allgather", "Allreduce", "Alltoallv"]:
+        for coll in coll_list:
             if options.coll_include and not coll in options.coll_include:
                 continue
             for filename, rst in rst_colls.iteritems():
@@ -427,7 +430,7 @@ def validate_params(options):
     if options.coll_include:
         options.coll_include = options.coll_include.split(",")
         for coll in options.coll_include:
-            if not coll in ["Barrier", "Bcast", "Allgather", "Allreduce", "Alltoallv"]:
+            if not coll in ["Barrier", "Bcast", "Broadcast", "All-to-Allv", "Allgather", "Allreduce", "Alltoallv"]:
                 print "Error: incorrect name of coll '{0}' is specified in -c param".format(coll)
                 sys.exit(0)
 
